@@ -106,7 +106,7 @@ export default function ModalComparativa({ pedido, onClose }) {
                 const cantFac = parseFloat(reng?.can_art || reng?.cantidad || 0)
                 const mismatch = !prod || !reng || Math.abs(cantPed - cantFac) > 0.01
 
-                const localDesc = prod?.art_des || prod?.descripcion || (reng?.art_des || reng?.descripcion) || prod?.co_art || 'S/D'
+                const localDesc = prod?.art_des || prod?.descripcion || (reng?.art_des_profit || reng?.descripcion) || prod?.co_art || 'S/D'
 
                 return (
                   <tr key={i} className={`${mismatch ? 'bg-red-50/30' : 'hover:bg-white'} transition-colors`}>
@@ -119,7 +119,7 @@ export default function ModalComparativa({ pedido, onClose }) {
                           <p className="font-bold text-xs text-slate-800 leading-tight mb-1">{localDesc}</p>
                           <div className="flex items-center gap-3">
                             <span className="text-[0.65rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black">Cant: {parseFloat(prod.cantidad).toFixed(0)}</span>
-                            <span className="text-[0.65rem] text-slate-400 font-mono italic">{prod.co_art}</span>
+                            <span className="text-[0.65rem] text-slate-400 font-mono italic">{prod.art_des_profit}</span>
                           </div>
                         </div>
                         : <span className="text-red-400 text-[0.65rem] font-black uppercase tracking-wider italic">Sin dato en pedido</span>
@@ -130,12 +130,13 @@ export default function ModalComparativa({ pedido, onClose }) {
                     <td className={`px-5 py-4 ${!reng ? 'bg-red-50' : ''}`}>
                       {reng
                         ? <div>
-                          <p className="font-bold text-xs text-slate-800 leading-tight mb-1">{reng.art_des || reng.co_art || reng.descripcion || 'S/D'}</p>
+                          <p className="font-bold text-xs text-slate-800 leading-tight mb-1">{reng.art_des || reng.art_des_profit || reng.descripcion || 'S/D'}</p>
+                          <span className="text-[0.65rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black">Cant: {parseFloat(reng.total_art || reng.cantidad).toFixed(0)}</span>
                           <div className="flex items-center gap-3">
                             <span className={`text-[0.65rem] px-1.5 py-0.5 rounded font-black ${prod && parseFloat(prod.cantidad) !== parseFloat(reng.can_art || reng.cantidad) ? 'bg-red-600 text-white' : 'bg-blue-100 text-blue-700'}`}>
-                              Fact: {parseFloat(reng.can_art || reng.cantidad || 0).toFixed(0)}
+                              Fact: {reng.num_doc || reng.num_doc || '-'}
                             </span>
-                            <span className="text-[0.65rem] text-slate-400 font-mono italic">Reg: {reng.num_doc || reng.fact_num || '-'}</span>
+
                           </div>
                         </div>
                         : <span className="text-red-400 text-[0.65rem] font-black uppercase tracking-wider italic">Sin dato en factura</span>

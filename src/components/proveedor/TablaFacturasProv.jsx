@@ -1,11 +1,12 @@
 import { formatFecha, formatCurrency, getPrecio } from '../../services/pedidosService'
 import { FileText, FileDown, ScrollText, Table, Eye } from 'lucide-react'
 
-export default function TablaFacturasProv({ 
-  facturas, 
-  onVerDetalles, 
-  onDescargarPDF, 
-  onDescargarExcel 
+export default function TablaFacturasProv({
+  facturas,
+  onVerDetalles,
+  onDescargarPDF,
+  onDescargarExcel,
+  onGenerarExcelGeneral
 }) {
   const hasData = Array.isArray(facturas) && facturas.length > 0
 
@@ -25,8 +26,9 @@ export default function TablaFacturasProv({
             >
               <FileDown size={16} />
             </button>
-            <button 
+            <button
               title="Descargar Excel General"
+              onClick={onGenerarExcelGeneral}
               className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors border border-emerald-200"
             >
               <Table size={16} />

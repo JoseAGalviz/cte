@@ -17,14 +17,13 @@ import EstadisticasUsuarios from '../../components/proveedor/EstadisticasUsuario
 import TablaFacturasProv from '../../components/proveedor/TablaFacturasProv'
 import TablaNotasCredito from '../../components/proveedor/TablaNotasCredito'
 import GestionStocks from '../../components/proveedor/GestionStocks'
+import RankingStats from '../../components/proveedor/RankingStats'
 
-// Reutilizamos el Modal de Detalles del Visitador si se ajusta visualmente
-// Importamos un par de modales o los ajustaremos (por simplicidad, los manejaremos despues o reusamos ModalProductos/ModalProforma)
-import ModalProductos from '../../components/visitador/ModalProductos'
+import ModalComparativaProv from '../../components/proveedor/ModalComparativaProv'
 import ModalProforma from '../../components/visitador/ModalProforma'
 
 // Importar generadores
-import { generarPDFFactura, generarExcelFactura } from '../../utils/exportHelpers'
+import { generarPDFFactura, generarExcelFactura, generarExcelTransferencias } from '../../utils/exportHelpers'
 
 export default function ProveedorDashboard() {
   const { user } = useAuth()
@@ -146,7 +145,7 @@ export default function ProveedorDashboard() {
              <VentasChart data={ventasUsuarios} />
           </div>
           <div className="xl:col-span-1 lg:col-span-1">
-             <EstadisticasUsuarios data={ventasUsuarios} />
+             <EstadisticasUsuarios data={ventasUsuarios} facturas={facturas} />
           </div>
         </div>
       </div>
@@ -201,6 +200,10 @@ export default function ProveedorDashboard() {
             </div>
           </div>
 
+          {!loading && facturas.length > 0 && (
+            <RankingStats facturas={facturas} />
+          )}
+
           {loading ? (
              <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-12 flex flex-col items-center justify-center text-slate-400">
                <Loader2 size={32} className="animate-spin mb-3" />
@@ -209,11 +212,12 @@ export default function ProveedorDashboard() {
           ) : (
             <>
               {/* Tabla de Transferencias */}
-              <TablaFacturasProv 
+              <TablaFacturasProv
                 facturas={facturas}
                 onVerDetalles={(factura) => setModalDetalles(factura)}
                 onDescargarPDF={(factura) => generarPDFFactura(factura)}
                 onDescargarExcel={(factura) => generarExcelFactura(factura)}
+                onGenerarExcelGeneral={() => generarExcelTransferencias(facturas)}
               />
 
               {/* Notas de Crédito */}
@@ -234,9 +238,8 @@ export default function ProveedorDashboard() {
 
       {/* Modales Compartidos */}
       {modalDetalles && (
-        <ModalProductos 
-          productos={Array.isArray(modalDetalles.articulos) ? modalDetalles.articulos : (modalDetalles.productos || [])}
-          infoProffit={{ factura: modalDetalles }}
+        <ModalComparativaProv
+          factura={modalDetalles}
           onClose={() => setModalDetalles(null)}
         />
       )}

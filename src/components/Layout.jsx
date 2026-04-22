@@ -164,7 +164,7 @@ export default function Layout({ children }) {
     </div>
   )
 
-  const hideSidebar = user?.rol === 'visitador'
+  const hideSidebar = user?.rol === 'visitador' || user?.rol === 'proveedor'
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden">
