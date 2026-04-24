@@ -10,21 +10,25 @@ const generatePaletteFor = (n) => {
   return out
 }
 
+const BAR_MIN_WIDTH = 64
+
 export default function VentasChart({ data }) {
   // data = [{ usuario: "Juan", total_unidades: 200 }, ...]
-  
-  // Transformar data para recharts
+
   const chartData = data?.map((item, i) => {
     const colors = generatePaletteFor(data.length)
+    const unidades = Number(item.total_unidades || item.total || 0)
     return {
       nombre: item.usuario || item.user || item.nombre || 'Desconocido',
-      unidades: Number(item.total_unidades || item.total || 0),
-      fill: colors[i]
+      unidades,
+      fill: unidades === 0 ? '#ef4444' : colors[i]
     }
   }) || []
 
+  const chartWidth = Math.max(500, chartData.length * BAR_MIN_WIDTH)
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col">
       <div className="flex items-center gap-2 mb-4">
         <div className="bg-emerald-100 text-emerald-700 p-2 rounded-lg">
           <TrendingUp size={18} />
@@ -33,31 +37,33 @@ export default function VentasChart({ data }) {
           Ventas Mensuales
         </h3>
       </div>
-      
-      <div style={{ width: '100%', height: 320 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
+
+      <div className="overflow-x-auto">
+        <div style={{ width: chartWidth, height: 360 }}>
+          <BarChart width={chartWidth} height={360} data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-            <XAxis 
-              dataKey="nombre" 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#64748b', fontSize: 12 }} 
-              dy={10}
+            <XAxis
+              dataKey="nombre"
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 11 }}
+              interval={0}
+              angle={-40}
+              textAnchor="end"
             />
-            <YAxis 
-              axisLine={false} 
-              tickLine={false} 
-              tick={{ fill: '#64748b', fontSize: 12 }} 
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748b', fontSize: 12 }}
               tickFormatter={v => `${v} UND`}
             />
-            <Tooltip 
+            <Tooltip
               cursor={{ fill: '#f1f5f9' }}
               contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             />
             <Bar dataKey="unidades" radius={[4, 4, 0, 0]} />
           </BarChart>
-        </ResponsiveContainer>
+        </div>
       </div>
     </div>
   )

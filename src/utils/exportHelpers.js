@@ -158,9 +158,9 @@ export async function generarExcelTransferencias(facturas) {
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
     })
 
-    // Anchos de columna (18 cols)
+    // Anchos de columna (19 cols)
     // 1:Factura 2:Pedido 3:SICM 4:Cliente 5:RIF 6:Fecha 7:Tasa 8:Total Bs 9:Total $ 10:Desc%
-    // 11:Usuario 12:#Reng 13:Código 14:Cod.Barras 15:Descripción 16:Cantidad 17:Precio 18:Subtotal
+    // 11:Usuario 12:#Reng 13:Código 14:Cod.Barras 15:Descripción 16:Cantidad 17:Precio$ 18:PrecioBS 19:Subtotal
     ws.columns = [
       { key: 'factura',   width: 14 },
       { key: 'pedido',    width: 11 },
@@ -179,10 +179,11 @@ export async function generarExcelTransferencias(facturas) {
       { key: 'articulo',  width: 60 },
       { key: 'cantidad',  width: 11 },
       { key: 'precio',    width: 13 },
+      { key: 'precioBs',  width: 16 },
       { key: 'subtotal',  width: 15 },
     ]
 
-    const TOTAL_COLS = 18
+    const TOTAL_COLS = 19
 
     // ── Fila 1: Título ─────────────────────────────────────────────────────────
     const titleRow = ws.addRow([`REPORTE DE TRANSFERENCIAS — ${hoy}`, ...Array(TOTAL_COLS - 1).fill('')])
@@ -216,7 +217,7 @@ export async function generarExcelTransferencias(facturas) {
     const headers = [
       'FACTURA', 'PEDIDO', 'SICM', 'CLIENTE', 'RIF', 'FECHA',
       'TASA', 'TOTAL BS', 'TOTAL $', 'DESC %', 'USUARIO',
-      '# RENG', 'CÓDIGO', 'COD. BARRAS', 'DESCRIPCIÓN', 'CANTIDAD', 'PRECIO UNIT.', 'TOTAL RENGLÓN'
+      '# RENG', 'CÓDIGO', 'COD. BARRAS', 'DESCRIPCIÓN', 'CANTIDAD', 'PRECIO UNIT. $', 'PRECIO UNIT. BS', 'TOTAL RENGLÓN'
     ]
     const hdrRow = ws.addRow(headers)
     hdrRow.height = 22
@@ -236,7 +237,7 @@ export async function generarExcelTransferencias(facturas) {
     // Columnas centradas
     const CENTER_COLS = new Set([1, 2, 3, 5, 6, 12, 13, 14])
     // Columnas alineadas a la derecha
-    const RIGHT_COLS  = new Set([7, 8, 9, 10, 16, 17, 18])
+    const RIGHT_COLS  = new Set([7, 8, 9, 10, 16, 17, 18, 19])
 
     let dataRowIndex = 0
 
@@ -272,6 +273,7 @@ export async function generarExcelTransferencias(facturas) {
           p ? (p.art_des || p.descripcion || '')                          : '',
           p ? (p.total_art ?? p.cantidad ?? p.cant_producto ?? p.cant ?? '') : '',
           p ? (p.prec_vta ?? p.precio ?? p.precio_unitario ?? '')         : '',
+          p ? (() => { const pu = Number(p.prec_vta ?? p.precio ?? p.precio_unitario ?? 0); const t = Number(f.tasa) || 0; return pu && t ? Number((pu * t).toFixed(2)) : '' })() : '',
           p ? (p.reng_neto ?? p.subtotal ?? p.total_linea ?? '')          : '',
         ])
         row.height = 16

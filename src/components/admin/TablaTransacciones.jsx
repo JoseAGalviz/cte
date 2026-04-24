@@ -13,7 +13,7 @@ function fmt(n) {
   return Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-export default function TablaTransacciones({ filas = [], notasMap = {} }) {
+export default function TablaTransacciones({ filas = [], notasMap = {}, headerRight }) {
   function normalize(s) {
     return String(s || '').replace(/^\s*\d+\s*[-. ]\s*/, '').replace(/\s+/g, ' ').trim().toUpperCase()
   }
@@ -30,8 +30,9 @@ export default function TablaTransacciones({ filas = [], notasMap = {} }) {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100">
-      <div className="px-5 py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-wrap gap-2">
         <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider">Transacciones por Proveedor</h3>
+        {headerRight}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">

@@ -33,7 +33,7 @@ export default function EstadisticasUsuarios({ data, facturas = [] }) {
   const toggle = (usuario) => setExpanded(prev => prev === usuario ? null : usuario)
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col h-[410px]">
       <div className="flex items-center gap-2 mb-4">
         <div className="bg-blue-100 text-blue-700 p-2 rounded-lg">
           <Users size={18} />
@@ -75,9 +75,13 @@ export default function EstadisticasUsuarios({ data, facturas = [] }) {
                           ? <ChevronUp size={13} className="text-blue-500 shrink-0" />
                           : <ChevronDown size={13} className="text-slate-400 shrink-0" />
                         }
-                        {usuario}
+                        <span
+                          style={unidades === 0 ? { textDecoration: 'underline', textDecorationColor: '#f87171', textUnderlineOffset: '3px' } : {}}
+                        >
+                          {usuario}
+                        </span>
                       </td>
-                      <td className="py-2.5 text-right font-bold text-slate-800">{unidades}</td>
+                      <td className={`py-2.5 text-right font-bold ${unidades === 0 ? 'text-red-400' : 'text-slate-800'}`}>{unidades}</td>
                     </tr>
 
                     {isOpen && (

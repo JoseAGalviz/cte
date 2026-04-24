@@ -65,7 +65,7 @@ export default function GestionStocks({ stockAlmacenes, productosVendidos }) {
 
       <div>
         {activeTab === 'proveedor' ? (
-          <div className="overflow-y-auto max-h-[935px]">
+          <div className="overflow-y-auto max-h-[500px]">
             {!productosVendidos || productosVendidos.length === 0 ? (
               <p className="text-sm text-slate-500 text-center py-4">Sin datos de productos más vendidos</p>
             ) : (
@@ -133,7 +133,7 @@ export default function GestionStocks({ stockAlmacenes, productosVendidos }) {
               </button>
             </div>
 
-            <div className="overflow-y-auto max-h-[935px]">
+            <div className="overflow-y-auto max-h-[500px]">
               {!parsedStock || parsedStock.length === 0 ? (
                 <p className="text-sm text-slate-500 text-center py-4">
                   {searchTerm ? 'No se encontraron coincidencias' : 'Sin datos de almacén'}

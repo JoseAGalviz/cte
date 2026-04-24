@@ -1,149 +1,325 @@
-import { Users, ClipboardList, Truck, BarChart2, TrendingUp, AlertTriangle, CheckCircle, Eye, Settings, Plus } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Loader2, Clock, Users, ListOrdered, AlertTriangle, X } from 'lucide-react'
 
-const stats = [
-  { label: 'Usuarios activos', value: '47', change: '+4', icon: Users, color: 'bg-rose-500' },
-  { label: 'Pedidos totales', value: '312', change: '+28%', icon: ClipboardList, color: 'bg-pink-500' },
-  { label: 'Proveedores', value: '23', change: '+2', icon: Truck, color: 'bg-orange-500' },
-  { label: 'Ventas totales', value: '$182K', change: '+18%', icon: TrendingUp, color: 'bg-red-500' },
-]
+import {
+  getTransferencias,
+  getTransacciones,
+  getNotasCredito,
+  getProductosVendidos,
+  getProveedores,
+  getDetallePedido,
+} from '../../services/adminService'
 
-const users = [
-  { name: 'Carlos Ruiz', rol: 'visitador', email: 'c.ruiz@cte.com', status: 'Activo', lastLogin: 'Hoy' },
-  { name: 'María González', rol: 'proveedor', email: 'm.gonzalez@cte.com', status: 'Activo', lastLogin: 'Ayer' },
-  { name: 'Pedro Alves', rol: 'compras', email: 'p.alves@cte.com', status: 'Activo', lastLogin: 'Hoy' },
-  { name: 'Ana Torres', rol: 'visitador', email: 'a.torres@cte.com', status: 'Inactivo', lastLogin: 'Hace 5 días' },
-  { name: 'Luis Mora', rol: 'proveedor', email: 'l.mora@cte.com', status: 'Activo', lastLogin: 'Hoy' },
-]
+import TablaTransferencias from '../../components/admin/TablaTransferencias'
+import TablaTransacciones from '../../components/admin/TablaTransacciones'
+import TablaNotasCreditoAdmin from '../../components/admin/TablaNotasCreditoAdmin'
+import ProductosVendidosAdmin from '../../components/admin/ProductosVendidosAdmin'
+import ModalEditarUsuarios from '../../components/admin/ModalEditarUsuarios'
+import ModalDetalleAdmin from '../../components/admin/ModalDetalleAdmin'
+import ModalTiemposPago from '../../components/admin/ModalTiemposPago'
+import ModalPedidos from '../../components/admin/ModalPedidos'
+import ModalInconsistencias from '../../components/admin/ModalInconsistencias'
 
-const roleBadge = {
-  visitador: 'bg-emerald-100 text-emerald-700',
-  proveedor: 'bg-violet-100 text-violet-700',
-  compras: 'bg-amber-100 text-amber-700',
-  administrador: 'bg-rose-100 text-rose-700',
-}
+// Default month range: 3 months ago → current
+const _now = new Date()
+const _pad = n => String(n).padStart(2, '0')
+const CURRENT_MONTH = `${_now.getFullYear()}-${_pad(_now.getMonth() + 1)}`
+const _3ago = new Date(_now.getFullYear(), _now.getMonth() - 2, 1)
+const START_MONTH_DEFAULT = `${_3ago.getFullYear()}-${_pad(_3ago.getMonth() + 1)}`
 
-const alerts = [
-  { type: 'warning', msg: '3 pedidos sin atención por más de 48h', time: 'hace 1h' },
-  { type: 'error', msg: 'Stock crítico en 5 productos del proveedor Norte', time: 'hace 3h' },
-  { type: 'success', msg: 'Backup del sistema completado exitosamente', time: 'hace 5h' },
-  { type: 'warning', msg: '2 usuarios con sesión expirada', time: 'Ayer' },
-]
-
-const alertIcon = {
-  warning: { icon: AlertTriangle, color: 'text-amber-500 bg-amber-50' },
-  error: { icon: AlertTriangle, color: 'text-red-500 bg-red-50' },
-  success: { icon: CheckCircle, color: 'text-emerald-500 bg-emerald-50' },
+function monthToDateRange(startM, endM) {
+  const [sy, sm] = (startM || CURRENT_MONTH).split('-').map(Number)
+  const [ey, em] = (endM || startM || CURRENT_MONTH).split('-').map(Number)
+  const lastDay = new Date(ey, em, 0).getDate()
+  return {
+    startDate: `${sy}-${_pad(sm)}-01`,
+    endDate: `${ey}-${_pad(em)}-${_pad(lastDay)}`,
+  }
 }
 
 export default function AdminDashboard() {
+  // Date filters
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [transStart, setTransStart] = useState(START_MONTH_DEFAULT)
+  const [transEnd, setTransEnd] = useState(CURRENT_MONTH)
+
+  // Data
+  const [transferencias, setTransferencias] = useState([])
+  const [transacciones, setTransacciones] = useState([])
+  const [notas, setNotas] = useState([])
+  const [productos, setProductos] = useState([])
+  const [provMap, setProvMap] = useState({})
+
+  // Loading
+  const [loading, setLoading] = useState(true)
+  const [loadingTrans, setLoadingTrans] = useState(false)
+  const [loadingDetalle, setLoadingDetalle] = useState(false)
+
+  // Modals
+  const [modalDetalle, setModalDetalle] = useState(null)
+  const [showTiemposPago, setShowTiemposPago] = useState(false)
+  const [showPedidos, setShowPedidos] = useState(false)
+  const [showInconsistencias, setShowInconsistencias] = useState(false)
+  const [showUsuarios, setShowUsuarios] = useState(false)
+
+  // notasMap: provider label (normalized) → total monto notas crédito
+  const notasMap = useMemo(() => {
+    const normalize = s =>
+      String(s || '').replace(/^\s*\d+\s*[-. ]\s*/, '').replace(/\s+/g, ' ').trim().toUpperCase()
+    const map = {}
+    notas.forEach(n => {
+      const label = provMap[n.co_prov] || n.prov_des || n.proveedor || ''
+      const key = normalize(label)
+      map[key] = (map[key] || 0) + (Number(n.monto || n.importe || 0) || 0)
+    })
+    return map
+  }, [notas, provMap])
+
+  // Load provMap once
+  useEffect(() => {
+    getProveedores()
+      .then(data => {
+        const m = {}
+        data.forEach(p => { m[p.co_prov] = p.prov_des })
+        setProvMap(m)
+      })
+      .catch(console.error)
+  }, [])
+
+  // Load transferencias + notas + productos
+  async function loadMain(d1 = null, d2 = null) {
+    setLoading(true)
+    try {
+      const [tfr, nts, prods] = await Promise.all([
+        getTransferencias(d1, d2),
+        getNotasCredito(d1, d2),
+        getProductosVendidos(d1, d2),
+      ])
+      setTransferencias(tfr)
+      setNotas(nts)
+      setProductos(prods)
+    } catch (e) {
+      console.error('loadMain error', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Load transacciones (also reloads notas for accurate notasMap)
+  async function loadTrans(d1 = null, d2 = null) {
+    setLoadingTrans(true)
+    try {
+      const [nts, trans] = await Promise.all([
+        getNotasCredito(d1, d2),
+        getTransacciones(d1, d2),
+      ])
+      setNotas(nts)
+      setTransacciones(trans)
+    } catch (e) {
+      console.error('loadTrans error', e)
+    } finally {
+      setLoadingTrans(false)
+    }
+  }
+
+  // Initial load
+  useEffect(() => {
+    loadMain()
+    const { startDate, endDate } = monthToDateRange(START_MONTH_DEFAULT, CURRENT_MONTH)
+    loadTrans(startDate, endDate)
+  }, [])
+
+  function handleBuscar() {
+    if (!fechaDesde || !fechaHasta) return
+    loadMain(fechaDesde, fechaHasta)
+    loadTrans(fechaDesde, fechaHasta)
+  }
+
+  function handleActualizarTrans() {
+    const { startDate, endDate } = monthToDateRange(
+      transStart || START_MONTH_DEFAULT,
+      transEnd || CURRENT_MONTH,
+    )
+    loadTrans(startDate, endDate)
+  }
+
+  async function handleVerDetalle(fila) {
+    const factNum = fila.fact_num || fila.fac_num || ''
+    if (!factNum) return
+    setLoadingDetalle(true)
+    try {
+      const res = await getDetallePedido(factNum)
+      // Normalize varying response shapes into { factura, renglones }
+      let data = res
+      if (!res?.factura && !res?.renglones) {
+        const items = res?.articulos || res?.productos || res?.items || res?.detalle
+        data = { factura: res?.factura || {}, renglones: items || (Array.isArray(res) ? res : []) }
+      }
+      setModalDetalle(data)
+    } catch (e) {
+      console.error('handleVerDetalle error', e)
+    } finally {
+      setLoadingDetalle(false)
+    }
+  }
+
+  const transFilter = (
+    <div className="flex flex-wrap items-center gap-2">
+      <div>
+        <label className="block text-[0.6rem] font-bold text-slate-400 uppercase mb-0.5">Desde (mes)</label>
+        <input
+          type="month"
+          value={transStart}
+          onChange={e => setTransStart(e.target.value)}
+          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none"
+        />
+      </div>
+      <div>
+        <label className="block text-[0.6rem] font-bold text-slate-400 uppercase mb-0.5">Hasta (mes)</label>
+        <input
+          type="month"
+          value={transEnd}
+          onChange={e => setTransEnd(e.target.value)}
+          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none"
+        />
+      </div>
+      <button
+        onClick={handleActualizarTrans}
+        disabled={loadingTrans}
+        className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg transition disabled:opacity-50 self-end"
+      >
+        {loadingTrans && <Loader2 size={12} className="animate-spin" />}
+        Actualizar
+      </button>
+    </div>
+  )
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Panel de Administración</h2>
-          <p className="text-slate-500 text-sm mt-0.5">Control total del sistema</p>
-        </div>
-        <div className="flex gap-2">
-          <button className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm">
-            <Settings size={16} /> Configuración
+    <div className="space-y-6 pb-28">
+      {/* Date filter bar */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="block text-[0.65rem] font-bold text-slate-400 uppercase mb-1">Desde</label>
+            <input
+              type="date"
+              value={fechaDesde}
+              onChange={e => setFechaDesde(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
+            />
+          </div>
+          <div>
+            <label className="block text-[0.65rem] font-bold text-slate-400 uppercase mb-1">Hasta</label>
+            <input
+              type="date"
+              value={fechaHasta}
+              onChange={e => setFechaHasta(e.target.value)}
+              className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400"
+            />
+          </div>
+          <button
+            onClick={handleBuscar}
+            disabled={!fechaDesde || !fechaHasta || loading}
+            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition disabled:opacity-50"
+          >
+            {loading && <Loader2 size={14} className="animate-spin" />}
+            Buscar
           </button>
-          <button className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">
-            <Plus size={16} /> Nuevo usuario
-          </button>
+          {(fechaDesde || fechaHasta) && (
+            <button
+              onClick={() => { setFechaDesde(''); setFechaHasta(''); loadMain() }}
+              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition"
+              title="Limpiar filtro"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map(s => {
-          const Icon = s.icon
-          return (
-            <div key={s.label} className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 ${s.color} rounded-lg flex items-center justify-center`}>
-                  <Icon size={18} className="text-white" />
-                </div>
-                <span className="text-xs text-rose-600 font-medium bg-rose-50 px-2 py-0.5 rounded-full">{s.change}</span>
-              </div>
-              <p className="text-2xl font-bold text-slate-800">{s.value}</p>
-              <p className="text-slate-500 text-sm mt-0.5">{s.label}</p>
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left — 3 cols */}
+        <div className="lg:col-span-3 space-y-6">
+
+          {/* Transferencias */}
+          {loading ? (
+            <div className="bg-white rounded-xl border border-slate-100 p-12 flex flex-col items-center text-slate-400">
+              <Loader2 size={28} className="animate-spin mb-3" />
+              <span className="text-sm font-medium">Cargando transferencias...</span>
             </div>
-          )
-        })}
-      </div>
+          ) : (
+            <TablaTransferencias filas={transferencias} onVerDetalle={handleVerDetalle} />
+          )}
 
-      <div className="grid lg:grid-cols-3 gap-4">
-        {/* Users table */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-100">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-            <h3 className="font-semibold text-slate-800">Usuarios del sistema</h3>
-            <button className="text-sm text-rose-600 hover:text-rose-700 font-medium">Gestionar</button>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="text-xs text-slate-500 uppercase tracking-wider">
-                  <th className="text-left px-5 py-3">Usuario</th>
-                  <th className="text-left px-5 py-3 hidden sm:table-cell">Correo</th>
-                  <th className="text-left px-5 py-3">Rol</th>
-                  <th className="text-left px-5 py-3">Estado</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {users.map(u => (
-                  <tr key={u.email} className="hover:bg-slate-50 transition">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center text-xs font-bold text-slate-600">
-                          {u.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-slate-700">{u.name}</p>
-                          <p className="text-xs text-slate-400">{u.lastLogin}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3 text-sm text-slate-500 hidden sm:table-cell">{u.email}</td>
-                    <td className="px-5 py-3">
-                      <span className={`text-xs px-2 py-1 rounded-full font-medium capitalize ${roleBadge[u.rol]}`}>{u.rol}</span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-1.5 h-1.5 rounded-full ${u.status === 'Activo' ? 'bg-emerald-500' : 'bg-slate-300'}`}></span>
-                        <span className="text-xs text-slate-500">{u.status}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <button className="text-slate-400 hover:text-slate-600"><Eye size={14} /></button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {/* Transacciones */}
+          <TablaTransacciones
+            filas={transacciones}
+            notasMap={notasMap}
+            headerRight={transFilter}
+          />
+
+          {/* Notas de Crédito */}
+          <TablaNotasCreditoAdmin notas={notas} provMap={provMap} />
         </div>
 
-        {/* Alerts */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
-          <h3 className="font-semibold text-slate-800 mb-4">Alertas del sistema</h3>
-          <div className="space-y-3">
-            {alerts.map((a, i) => {
-              const cfg = alertIcon[a.type]
-              const Icon = cfg.icon
-              return (
-                <div key={i} className={`flex gap-3 p-3 rounded-lg ${cfg.color.split(' ')[1]}`}>
-                  <Icon size={16} className={`shrink-0 mt-0.5 ${cfg.color.split(' ')[0]}`} />
-                  <div>
-                    <p className="text-sm text-slate-700 leading-tight">{a.msg}</p>
-                    <p className="text-xs text-slate-400 mt-1">{a.time}</p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
+        {/* Right sidebar — 1 col */}
+        <div className="lg:col-span-1">
+          <ProductosVendidosAdmin proveedores={productos} />
         </div>
       </div>
+
+      {/* Detalle loading overlay */}
+      {loadingDetalle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-xl px-8 py-6 flex items-center gap-3 shadow-xl">
+            <Loader2 size={22} className="animate-spin text-rose-500" />
+            <span className="text-sm font-semibold text-slate-700">Cargando detalle...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Floating action buttons */}
+      <div className="fixed bottom-8 right-6 z-40 flex flex-row-reverse gap-3 flex-wrap">
+        <button
+          onClick={() => setShowTiemposPago(true)}
+          className="w-14 h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-lg flex items-center justify-center transition"
+          title="Tiempos de Pago"
+        >
+          <Clock size={20} />
+        </button>
+        <button
+          onClick={() => setShowUsuarios(true)}
+          className="w-14 h-14 bg-rose-600 hover:bg-rose-700 text-white rounded-full shadow-lg flex items-center justify-center transition"
+          title="Editar Usuarios"
+        >
+          <Users size={20} />
+        </button>
+        <button
+          onClick={() => setShowPedidos(true)}
+          className="w-14 h-14 bg-amber-500 hover:bg-amber-600 text-white rounded-full shadow-lg flex items-center justify-center transition"
+          title="Ver Pedidos"
+        >
+          <ListOrdered size={20} />
+        </button>
+        <button
+          onClick={() => setShowInconsistencias(true)}
+          className="w-14 h-14 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg flex items-center justify-center transition"
+          title="Inconsistencias"
+        >
+          <AlertTriangle size={20} />
+        </button>
+      </div>
+
+      {/* Modals */}
+      {modalDetalle && (
+        <ModalDetalleAdmin detalle={modalDetalle} onClose={() => setModalDetalle(null)} />
+      )}
+      {showTiemposPago && <ModalTiemposPago onClose={() => setShowTiemposPago(false)} />}
+      {showPedidos && <ModalPedidos onClose={() => setShowPedidos(false)} />}
+      {showInconsistencias && <ModalInconsistencias onClose={() => setShowInconsistencias(false)} />}
+      {showUsuarios && <ModalEditarUsuarios onClose={() => setShowUsuarios(false)} />}
     </div>
   )
 }

@@ -37,9 +37,9 @@ export default function TablaFacturasProv({
         )}
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[420px]">
         <table className="w-full text-sm text-left border-collapse">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="bg-slate-50 text-slate-500 uppercase text-[0.65rem] tracking-wider border-b border-slate-200">
               <th className="px-5 py-3 font-semibold">Cliente</th>
               <th className="px-5 py-3 font-semibold">RIF</th>

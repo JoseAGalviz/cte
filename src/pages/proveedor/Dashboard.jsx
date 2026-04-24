@@ -38,8 +38,14 @@ export default function ProveedorDashboard() {
   const [productosVendidos, setProductosVendidos] = useState([])
   const [stockAlmacenes, setStockAlmacenes] = useState([])
   const [notasCredito, setNotasCredito] = useState([])
-  
-  const [loading, setLoading] = useState(true)
+
+  const [loadingFacturas, setLoadingFacturas] = useState(true)
+  const [loadingVentas, setLoadingVentas] = useState(true)
+  const [loadingProductos, setLoadingProductos] = useState(true)
+  const [loadingStock, setLoadingStock] = useState(true)
+  const [loadingNotas, setLoadingNotas] = useState(true)
+
+  const anyLoading = loadingFacturas || loadingVentas || loadingProductos || loadingStock || loadingNotas
   
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
@@ -49,53 +55,58 @@ export default function ProveedorDashboard() {
   const [modalDetalles, setModalDetalles] = useState(null)
   const [modalProforma, setModalProforma] = useState(null)
 
-  // Función principal para cargar todo
-  const loadDashboardData = async (fDesde = '', fHasta = '') => {
+  // Función principal para cargar todo — progresivo, cada sección muestra al llegar
+  const loadDashboardData = (fDesde = '', fHasta = '') => {
     if (!codProv) {
-      setLoading(false)
+      setLoadingFacturas(false)
+      setLoadingVentas(false)
+      setLoadingProductos(false)
+      setLoadingStock(false)
+      setLoadingNotas(false)
       return
     }
-    
-    setLoading(true)
-    try {
-      // Cargamos todas las APIs en paralelo para máxima eficiencia
-      const [
-        resFacturas, 
-        resVentasUsr, 
-        resProdVendido,
-        resStock,
-        resNotas
-      ] = await Promise.all([
-        getFacturasProveedor(codProv, fDesde, fHasta),
-        getVentasUsuarios(codProv),
-        getProductosMasVendidos(codProv),
-        getStockAlmacenes(codProv),
-        getNotasCredito(codProv)
-      ])
 
-      // Parse facturas (pueden venir envueltas en res.facturas o res.data)
-      let parsedFacturas = []
-      if (Array.isArray(resFacturas)) parsedFacturas = resFacturas
-      else if (resFacturas && Array.isArray(resFacturas.facturas)) parsedFacturas = resFacturas.facturas
-      else if (resFacturas && Array.isArray(resFacturas.data)) parsedFacturas = resFacturas.data
+    setLoadingFacturas(true)
+    setLoadingVentas(true)
+    setLoadingProductos(true)
+    setLoadingStock(true)
+    setLoadingNotas(true)
 
-      // Ordenar facturas desc
-      parsedFacturas.sort((a, b) => {
-        const da = a?.fec_emis ? Date.parse(a.fec_emis) : 0
-        const db = b?.fec_emis ? Date.parse(b.fec_emis) : 0
-        return db - da
+    getFacturasProveedor(codProv, fDesde, fHasta)
+      .then(res => {
+        let parsed = []
+        if (Array.isArray(res)) parsed = res
+        else if (res && Array.isArray(res.facturas)) parsed = res.facturas
+        else if (res && Array.isArray(res.data)) parsed = res.data
+        parsed.sort((a, b) => {
+          const da = a?.fec_emis ? Date.parse(a.fec_emis) : 0
+          const db = b?.fec_emis ? Date.parse(b.fec_emis) : 0
+          return db - da
+        })
+        setFacturas(parsed)
       })
+      .catch(err => console.error('Error facturas:', err))
+      .finally(() => setLoadingFacturas(false))
 
-      setFacturas(parsedFacturas)
-      setVentasUsuarios(resVentasUsr)
-      setProductosVendidos(resProdVendido)
-      setStockAlmacenes(resStock)
-      setNotasCredito(resNotas)
-    } catch (err) {
-      console.error('Error cargando el dashboard del proveedor:', err)
-    } finally {
-      setLoading(false)
-    }
+    getVentasUsuarios(codProv)
+      .then(setVentasUsuarios)
+      .catch(err => console.error('Error ventas:', err))
+      .finally(() => setLoadingVentas(false))
+
+    getProductosMasVendidos(codProv)
+      .then(setProductosVendidos)
+      .catch(err => console.error('Error productos:', err))
+      .finally(() => setLoadingProductos(false))
+
+    getStockAlmacenes(codProv)
+      .then(setStockAlmacenes)
+      .catch(err => console.error('Error stock:', err))
+      .finally(() => setLoadingStock(false))
+
+    getNotasCredito(codProv)
+      .then(setNotasCredito)
+      .catch(err => console.error('Error notas:', err))
+      .finally(() => setLoadingNotas(false))
   }
 
   // Carga inicial
@@ -114,125 +125,146 @@ export default function ProveedorDashboard() {
   }
 
   return (
-    <div className="space-y-6 max-w-full overflow-hidden pb-10">
-      
-      {/* Botones de Catálogo (UI Header) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm p-4 sm:p-5 flex items-center justify-center gap-4 transition-colors">
-          <MapPin size={40} className="opacity-90 shrink-0" />
+    <div className="flex flex-col gap-4 max-w-full overflow-hidden pb-6">
+
+      {/* Botones de catálogo — ancho completo */}
+      <div className="grid grid-cols-2 gap-3">
+        <button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors">
+          <MapPin size={22} className="opacity-90 shrink-0" />
           <div className="text-left">
-            <span className="block font-bold text-lg leading-tight uppercase">Catálogo Táchira, Mérida, Trujillo</span>
-            <span className="text-sm opacity-80 font-medium">Consultar disponibilidad regional</span>
+            <span className="block font-bold text-sm leading-tight uppercase">Táchira · Mérida · Trujillo</span>
+            <span className="text-xs opacity-75">Disponibilidad regional</span>
           </div>
         </button>
-        
-        <button className="bg-slate-700 hover:bg-slate-800 text-white rounded-xl shadow-sm p-4 sm:p-5 flex items-center justify-center gap-4 transition-colors">
-          <Globe size={40} className="opacity-90 shrink-0" />
+
+        <button className="bg-slate-700 hover:bg-slate-800 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors">
+          <Globe size={22} className="opacity-90 shrink-0" />
           <div className="text-left">
-            <span className="block font-bold text-lg leading-tight uppercase">Otros Estados</span>
-            <span className="text-sm opacity-80 font-medium">Consultar disponibilidad nacional</span>
+            <span className="block font-bold text-sm leading-tight uppercase">Otros Estados</span>
+            <span className="text-xs opacity-75">Disponibilidad nacional</span>
           </div>
         </button>
       </div>
 
-      <div className="mt-8">
-        <h2 className="text-xl font-black text-slate-800 uppercase tracking-wider mb-4 border-l-4 border-emerald-500 pl-3">
+      {/* Estadísticas */}
+      <div>
+        <h2 className="text-base font-black text-slate-800 uppercase tracking-wider mb-3 border-l-4 border-emerald-500 pl-3">
           Estadísticas
         </h2>
-        
-        <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-3 gap-6">
-          <div className="xl:col-span-2 lg:col-span-2 min-h-[300px]">
-             <VentasChart data={ventasUsuarios} />
+        <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-3 gap-4">
+          <div className="xl:col-span-2 lg:col-span-2">
+            {loadingVentas ? (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-10 flex flex-col items-center justify-center text-slate-400 min-h-[300px]">
+                <Loader2 size={28} className="animate-spin mb-3" />
+                <span className="font-medium text-sm">Cargando ventas...</span>
+              </div>
+            ) : (
+              <VentasChart data={ventasUsuarios} />
+            )}
           </div>
           <div className="xl:col-span-1 lg:col-span-1">
-             <EstadisticasUsuarios data={ventasUsuarios} facturas={facturas} />
+            {loadingVentas || loadingFacturas ? (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-10 flex flex-col items-center justify-center text-slate-400 min-h-[200px]">
+                <Loader2 size={28} className="animate-spin mb-3" />
+                <span className="font-medium text-sm">Cargando estadísticas...</span>
+              </div>
+            ) : (
+              <EstadisticasUsuarios data={ventasUsuarios} facturas={facturas} />
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-3 gap-6 pt-4">
-        
-        {/* Columna Izquierda / Principal (75%) */}
-        <div className="xl:col-span-2 lg:col-span-2 space-y-6">
-          
-          {/* Filtro de Fechas */}
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-            <h6 className="text-slate-500 font-bold text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
-              Filtrar por fecha
-            </h6>
-            <div className="flex flex-col sm:flex-row items-end gap-3">
-              <div className="w-full sm:flex-1">
-                <label className="block text-[0.65rem] font-bold text-slate-400 uppercase mb-1">Desde</label>
-                <input 
-                  type="date" 
-                  value={fechaDesde} 
+      {/* Datos principales */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-3 gap-4">
+
+        {/* Columna principal */}
+        <div className="xl:col-span-2 lg:col-span-2 space-y-4">
+
+          {!loadingFacturas && facturas.length > 0 && (
+            <RankingStats facturas={facturas} />
+          )}
+
+          {/* Filtro de fechas sobre la tabla */}
+          <div className="bg-white p-3 rounded-xl shadow-sm border border-slate-100">
+            <div className="flex flex-wrap items-end gap-2">
+              <div className="flex-1 min-w-[130px]">
+                <label className="block text-[0.6rem] font-bold text-slate-400 uppercase mb-1">Desde</label>
+                <input
+                  type="date"
+                  value={fechaDesde}
                   onChange={e => setFechaDesde(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
-              <div className="w-full sm:flex-1">
-                <label className="block text-[0.65rem] font-bold text-slate-400 uppercase mb-1">Hasta</label>
-                <input 
-                  type="date" 
-                  value={fechaHasta} 
+              <div className="flex-1 min-w-[130px]">
+                <label className="block text-[0.6rem] font-bold text-slate-400 uppercase mb-1">Hasta</label>
+                <input
+                  type="date"
+                  value={fechaHasta}
                   onChange={e => setFechaHasta(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
                 />
               </div>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <button 
-                  onClick={handleAplicarFiltro}
-                  className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-6 rounded-lg text-sm transition-colors shadow-sm flex items-center justify-center gap-2"
+              <button
+                onClick={handleAplicarFiltro}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-lg text-sm transition-colors shadow-sm flex items-center gap-2 shrink-0"
+              >
+                {anyLoading && <Loader2 size={14} className="animate-spin" />}
+                OK
+              </button>
+              {(fechaDesde || fechaHasta) && (
+                <button
+                  onClick={handleLimpiarFiltro}
+                  className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-lg transition-colors border border-transparent hover:border-rose-100 shrink-0"
+                  title="Limpiar filtros"
                 >
-                  {loading && <Loader2 size={16} className="animate-spin" />}
-                  OK
+                  <X size={16} />
                 </button>
-                {(fechaDesde || fechaHasta) && (
-                  <button 
-                    onClick={handleLimpiarFiltro}
-                    className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-lg transition-colors border border-transparent hover:border-rose-100"
-                    title="Limpiar filtros"
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           </div>
 
-          {!loading && facturas.length > 0 && (
-            <RankingStats facturas={facturas} />
-          )}
-
-          {loading ? (
-             <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-12 flex flex-col items-center justify-center text-slate-400">
-               <Loader2 size={32} className="animate-spin mb-3" />
-               <span className="font-medium text-sm">Cargando transferencias...</span>
-             </div>
+          {loadingFacturas ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-10 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 size={28} className="animate-spin mb-3" />
+              <span className="font-medium text-sm">Cargando transferencias...</span>
+            </div>
           ) : (
-            <>
-              {/* Tabla de Transferencias */}
-              <TablaFacturasProv
-                facturas={facturas}
-                onVerDetalles={(factura) => setModalDetalles(factura)}
-                onDescargarPDF={(factura) => generarPDFFactura(factura)}
-                onDescargarExcel={(factura) => generarExcelFactura(factura)}
-                onGenerarExcelGeneral={() => generarExcelTransferencias(facturas)}
-              />
-
-              {/* Notas de Crédito */}
-              <TablaNotasCredito notas={notasCredito} />
-            </>
+            <TablaFacturasProv
+              facturas={facturas}
+              onVerDetalles={(factura) => setModalDetalles(factura)}
+              onDescargarPDF={(factura) => generarPDFFactura(factura)}
+              onDescargarExcel={(factura) => generarExcelFactura(factura)}
+              onGenerarExcelGeneral={() => generarExcelTransferencias(facturas)}
+            />
           )}
 
+          {loadingNotas ? (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center text-slate-400">
+              <Loader2 size={22} className="animate-spin mb-3" />
+              <span className="font-medium text-sm">Cargando notas de crédito...</span>
+            </div>
+          ) : (
+            <TablaNotasCredito notas={notasCredito} />
+          )}
         </div>
 
-        {/* Columna Derecha / Sidebar (25%) */}
+        {/* Sidebar sticky */}
         <div className="xl:col-span-1 lg:col-span-1">
-          <GestionStocks 
-            productosVendidos={productosVendidos} 
-            stockAlmacenes={stockAlmacenes} 
-          />
+          <div className="sticky top-4">
+            {loadingProductos || loadingStock ? (
+              <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-10 flex flex-col items-center justify-center text-slate-400">
+                <Loader2 size={28} className="animate-spin mb-3" />
+                <span className="font-medium text-sm">Cargando stocks...</span>
+              </div>
+            ) : (
+              <GestionStocks
+                productosVendidos={productosVendidos}
+                stockAlmacenes={stockAlmacenes}
+              />
+            )}
+          </div>
         </div>
       </div>
 

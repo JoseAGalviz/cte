@@ -5,7 +5,7 @@ export default function TablaNotasCredito({ notas }) {
   const hasData = Array.isArray(notas) && notas.length > 0
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col h-full">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col">
       <div className="flex items-center gap-2 mb-4">
         <div className="bg-emerald-100 text-emerald-700 p-2 rounded-lg">
           <CreditCard size={18} />
@@ -15,14 +15,14 @@ export default function TablaNotasCredito({ notas }) {
         </h3>
       </div>
 
-      <div className="flex-1 overflow-x-auto">
+      <div className="overflow-auto max-h-[300px]">
         {!hasData ? (
           <div className="bg-slate-50 text-slate-500 p-4 rounded-lg text-center text-sm">
             Sin notas de crédito para este periodo.
           </div>
         ) : (
           <table className="w-full text-sm text-left border-collapse">
-            <thead>
+            <thead className="sticky top-0 z-10">
               <tr className="bg-slate-50 text-slate-500 uppercase text-[0.65rem] tracking-wider border-b border-slate-200">
                 <th className="px-4 py-2 font-semibold">Fecha</th>
                 <th className="px-4 py-2 font-semibold">Observación</th>
