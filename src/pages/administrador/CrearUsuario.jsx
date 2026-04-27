@@ -363,6 +363,7 @@ export default function CrearUsuario() {
                         value={form.proveedor}
                         onChange={v => setForm({ ...form, proveedor: v })}
                         loading={loadingProv}
+                        searchable
                       />
                       <div />
                     </div>

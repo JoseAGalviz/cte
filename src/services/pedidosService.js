@@ -1,5 +1,41 @@
 import { api } from './api'
 
+const PEDIDOS_TRANS_URL = 'https://98.94.185.164.nip.io/api/pedidosTrans/crear'
+
+/**
+ * Crea un pedido de transferencista en el sistema.
+ * POST https://98.94.185.164.nip.io/api/pedidosTrans/crear
+ *
+ * @param {Object} payload
+ * @param {string}   payload.cod_cliente     - Código del cliente (obligatorio)
+ * @param {string}   payload.codigo_pedido   - Identificador externo del pedido (obligatorio)
+ * @param {string}   [payload.cod_prov]      - Código del proveedor
+ * @param {number}   [payload.porc_gdesc_total] - % descuento global (cliente + proveedor)
+ * @param {string}   [payload.ip_cliente]    - Dirección IP del cliente
+ * @param {string}   [payload.co_us_in]      - Usuario origen
+ * @param {Object}   [payload.usuario]       - Objeto usuario { user }
+ * @param {Array}    payload.items           - Al menos 1 elemento
+ * @param {string}   payload.items[].co_art  - Código de artículo (obligatorio)
+ * @param {number}   [payload.items[].cant_bq]  - Cantidad Barquisimeto
+ * @param {number}   [payload.items[].cant_sc]  - Cantidad San Cristóbal
+ * @param {number}   [payload.items[].cant_producto] - Cantidad total (si no se especifica almacén)
+ * @param {number}   [payload.items[].descuento] - % descuento del proveedor
+ */
+export async function crearPedidoTransf(payload) {
+  const response = await fetch(PEDIDOS_TRANS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const data = await response.json()
+  if (!response.ok) {
+    console.error('[crearPedidoTransf] HTTP', response.status, data)
+    const message = data?.error || data?.message || `Error ${response.status}`
+    throw new Error(message)
+  }
+  return data
+}
+
 export async function getTiemposPago() {
   const raw = await api.get('/tiempos-pago')
   const arr = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : [])

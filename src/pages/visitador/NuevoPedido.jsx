@@ -5,7 +5,7 @@ import {
   ArrowLeft, Search, ShoppingCart, X, Check, Loader2,
   FileText, Package, Trash2, ChevronRight, AlertCircle
 } from 'lucide-react'
-import { getTiemposPago, getClienteByRif, getTipoCliente, enviarPedido } from '../../services/pedidosService'
+import { getTiemposPago, getClienteByRif, getTipoCliente, enviarPedido, crearPedidoTransf } from '../../services/pedidosService'
 import { getCatalogo } from '../../services/catalogoService'
 import { asArray } from '../../services/clientesService'
 
@@ -210,7 +210,7 @@ function ModalVistaPrevio({ cartItems, totalUnidades, totalNeto, descGlobal, des
                   <td className="px-4 py-2.5 text-center font-black text-gray-900">{item.cantidad}</td>
                   <td className="px-4 py-2.5">
                     <div className="font-bold text-xs text-gray-800">{item.descripcion || item.art_des}</div>
-                    <div className="text-[0.6rem] text-gray-400 font-mono mt-0.5">{item.co_art}</div>
+                    <div className="text-[0.6rem] text-gray-400 font-mono mt-0.5">{item.imagen}</div>
                     {(item.cantBQ > 0 || item.cantSC > 0) && (
                       <div className="flex gap-2 mt-1">
                         {item.cantBQ > 0 && <span className="text-[0.55rem] bg-gray-100 px-1.5 py-0.5 rounded font-bold text-gray-600">B/Q: {item.cantBQ}</span>}
@@ -304,6 +304,7 @@ export default function NuevoPedido() {
   const [showPreview, setShowPreview] = useState(false)
   const [lightboxIdx, setLightboxIdx] = useState(null)
   const [enviando, setEnviando] = useState(false)
+  const [clientIp, setClientIp] = useState('127.0.0.1')
 
   const descProveedorInputRef = useRef(null)
 
@@ -347,6 +348,14 @@ export default function NuevoPedido() {
       .catch(err => setError(err.message))
       .finally(() => setLoading(false))
   }, [cliente, user])
+
+  // Fetch client IP
+  useEffect(() => {
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(data => setClientIp(data.ip))
+      .catch(() => setClientIp('127.0.0.1'))
+  }, [])
 
   // ── Descuentos de tiempo de pago ─────────────────────────────────────────
   const handleTiempoToggle = (idx) => {
@@ -441,33 +450,81 @@ export default function NuevoPedido() {
     try {
       const provArr = asArray(user?.proveedor)
       const cod_prov = provArr[0] || String(user?.proveedor || '')
-      const tiemposList = [...tiemposActivos].map(i => tiemposPago[i]).filter(Boolean)
 
-      await enviarPedido({
-        cod_cliente: cliente.co_cli || '',
-        cod_prov,
-        tot_neto: parseFloat(totalNeto.toFixed(2)),
-        porc_gdesc: descGlobal + descProveedorNum,
-        descrip: observacion,
-        descuento_proveedor: descProveedorNum,
-        tiempos_pago: tiemposList,
-        usuario: user?.user || '',
-        productos: cartItems.map(item => ({
-          co_art: item.co_art,
-          art_des: item.descripcion || item.art_des || '',
-          cantidad_bq: item.cantBQ,
-          cantidad_sc: item.cantSC,
-          cantidad: item.cantidad,
-          precio_unit: parseFloat(item.precioU.toFixed(4)),
-          tot_art: parseFloat(item.subtotal.toFixed(2)),
-        })),
+      const descuentosAdicionalesList = []
+      for (const idx of tiemposActivos) {
+        const t = tiemposPago[idx]
+        if (t) descuentosAdicionalesList.push({ tiempo: t.tiempo, porcentaje: t.porcentaje })
+      }
+
+      const porc_gdesc = descGlobal + descProveedorNum
+      const porc_gdesc_total = porc_gdesc + sumaDescAdicionales
+
+      const items = cartItems.map(item => {
+        const cantTotal = item.cantBQ + item.cantSC
+        // tot_bruto = price after art/cat/lin/global/provider discounts × qty (no 0.9 factor)
+        const tot_bruto = +(item.precioU * cantTotal).toFixed(2)
+        const tot_neto = +(tot_bruto * 0.9).toFixed(2)
+        const iva_item = +(tot_bruto - tot_neto).toFixed(2)
+
+        return {
+          co_art: item.imagen,
+          cant_bq: item.cantBQ,
+          cant_sc: item.cantSC,
+          cant_producto: cantTotal,
+          precio: parseFloat(item.Precio) || 0,
+          descuento: descProveedorNum,
+          desc_especial: 0,
+          porc_gdesc,
+          porc_gdesc_total,
+          suma_descuentos_adicionales: sumaDescAdicionales,
+          tot_bruto,
+          tot_neto,
+          saldo: tot_neto,
+          iva: iva_item,
+        }
       })
+
+      const payload = {
+        usuario: { user: user?.user || '' },
+        co_us_in: user?.user || '',
+        cod_cliente: cliente.co_cli || '',
+        codigo_pedido: Date.now(),
+        items,
+        cod_prov,
+        descuentos_adicionales: descuentosAdicionalesList,
+        descrip: observacion,
+        ip_cliente: clientIp,
+      }
+
+      const result = await crearPedidoTransf(payload)
 
       setShowPreview(false)
       setCantidades({})
+
+      // Mostrar éxito con SweetAlert2
+      const Swal = (await import('sweetalert2')).default
+      await Swal.fire({
+        icon: 'success',
+        title: '¡Pedido Registrado!',
+        html: `El pedido ha sido creado exitosamente.<br><br><strong style="font-size:1.2rem">N° ${result.fact_num || '—'}</strong>`,
+        confirmButtonText: 'Aceptar',
+        confirmButtonColor: '#16a34a',
+        customClass: { popup: 'rounded-2xl' },
+      })
+
       navigate('/visitador', { replace: true })
     } catch (err) {
-      alert('Error al enviar el pedido: ' + err.message)
+      console.error('[handleConfirmar] error:', err)
+      const Swal = (await import('sweetalert2')).default
+      Swal.fire({
+        icon: 'error',
+        title: 'Error al enviar el pedido',
+        text: err.message,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#dc2626',
+        customClass: { popup: 'rounded-2xl' },
+      })
     } finally {
       setEnviando(false)
     }
