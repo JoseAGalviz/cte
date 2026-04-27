@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Loader2, Clock, Users, ListOrdered, AlertTriangle, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Loader2, Clock, Users, ListOrdered, AlertTriangle, X, UserPlus } from 'lucide-react'
 
 import {
   getTransferencias,
@@ -38,6 +39,7 @@ function monthToDateRange(startM, endM) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   // Date filters
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
@@ -288,6 +290,14 @@ export default function AdminDashboard() {
           title="Tiempos de Pago"
         >
           <Clock size={20} />
+        </button>
+        <button
+          onClick={() => navigate('/administrador/usuarios')}
+          className="w-14 h-14 text-white rounded-full shadow-lg flex items-center justify-center transition"
+          style={{ backgroundColor: '#1A9888' }}
+          title="Crear Usuario"
+        >
+          <UserPlus size={20} />
         </button>
         <button
           onClick={() => setShowUsuarios(true)}

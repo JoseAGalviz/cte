@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { LogOut, User } from 'lucide-react'
+import logo from '../assets/logo.png'
 
 const roleConfig = {
   visitador:     { label: 'Visitador',     badgeColor: 'bg-emerald-100 text-emerald-800' },
@@ -24,8 +25,12 @@ export default function Layout({ children }) {
     <div className="flex flex-col h-screen bg-slate-100 overflow-hidden">
       {/* Topbar */}
       <header className="bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-4 shadow-sm shrink-0">
-        <div className="flex-1">
-          <h1 className="text-slate-800 font-semibold text-base">Centro de Transferencias</h1>
+        <div className="flex-1 flex items-center gap-3">
+          <img src={logo} alt="Cristmedicals" className="h-10 w-auto" />
+          <div className="hidden sm:block border-l border-slate-200 pl-3">
+            <p className="text-sm font-bold text-slate-800 leading-tight">Cristmedicals</p>
+            <p className="text-xs text-slate-500 leading-tight">Centro de Transferencias</p>
+          </div>
         </div>
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
           <div className="hidden sm:flex items-center gap-2">

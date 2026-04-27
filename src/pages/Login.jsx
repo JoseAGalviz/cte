@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Package, Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react'
 import backImg from '../assets/back.png'
+import logo from '../assets/logo.png'
 
 const ROLE_ROUTES = {
   visitador: '/visitador',
@@ -50,11 +51,11 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur rounded-2xl mb-4 shadow-lg">
-            <Package size={32} className="text-white" />
+          <div className="inline-flex items-center justify-center bg-white rounded-2xl mb-4 shadow-lg px-8 py-4">
+            <img src={logo} alt="Cristmedicals" className="h-14 w-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Centro de Transferencias</h1>
-          <p className="text-slate-400 mt-1 text-sm">Sistema de gestión de pedidos</p>
+          <h1 className="text-3xl font-bold text-white">Cristmedicals</h1>
+          <p className="text-slate-300 mt-1 text-sm">Centro de Transferencias</p>
         </div>
 
         {/* Card */}
@@ -120,12 +121,6 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-slate-500 mt-5">
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-slate-700 font-semibold hover:underline">
-              Regístrate
-            </Link>
-          </p>
         </div>
       </div>
     </div>

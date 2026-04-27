@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Package, Eye, EyeOff, UserPlus, AlertCircle, Check } from 'lucide-react'
+import { Eye, EyeOff, UserPlus, AlertCircle, Check } from 'lucide-react'
+import logo from '../assets/logo.png'
 
 const ROLES = [
   { value: 'visitador', label: 'Visitador', desc: 'Gestión de pedidos y clientes', color: 'border-emerald-400 bg-emerald-50 text-emerald-700' },
@@ -47,11 +48,11 @@ export default function Register() {
       <div className="w-full max-w-lg">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-white/10 backdrop-blur rounded-2xl mb-4 shadow-lg">
-            <Package size={32} className="text-white" />
+          <div className="inline-flex items-center justify-center bg-white rounded-2xl mb-4 shadow-lg px-8 py-4">
+            <img src={logo} alt="Cristmedicals" className="h-14 w-auto" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Centro de Transferencias</h1>
-          <p className="text-slate-400 mt-1 text-sm">Crea tu cuenta para acceder al sistema</p>
+          <h1 className="text-3xl font-bold text-white">Cristmedicals</h1>
+          <p className="text-slate-300 mt-1 text-sm">Crea tu cuenta para acceder al sistema</p>
         </div>
 
         {/* Card */}

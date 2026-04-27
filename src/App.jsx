@@ -4,12 +4,12 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/Layout'
 
 import Login from './pages/Login'
-import Register from './pages/Register'
 
 import VisitadorDashboard from './pages/visitador/Dashboard'
 import NuevoPedido from './pages/visitador/NuevoPedido'
 import ProveedorDashboard from './pages/proveedor/Dashboard'
 import AdminDashboard from './pages/administrador/Dashboard'
+import CrearUsuario from './pages/administrador/CrearUsuario'
 import ComprasDashboard from './pages/compras/Dashboard'
 
 const roleRoutes = {
@@ -40,7 +40,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/register" element={<Navigate to="/login" replace />} />
 
       {/* Visitador */}
       <Route path="/visitador/*" element={
@@ -78,7 +78,7 @@ function AppRoutes() {
           <Layout>
             <Routes>
               <Route index element={<AdminDashboard />} />
-              <Route path="usuarios" element={<PlaceholderPage title="Gestión de Usuarios" />} />
+              <Route path="usuarios" element={<CrearUsuario />} />
               <Route path="pedidos" element={<PlaceholderPage title="Pedidos" />} />
               <Route path="proveedores" element={<PlaceholderPage title="Proveedores" />} />
               <Route path="reportes" element={<PlaceholderPage title="Reportes del Sistema" />} />
