@@ -52,7 +52,7 @@ export default function GestionStocks({ stockAlmacenes, productosVendidos }) {
             }`}
           onClick={() => setActiveTab('proveedor')}
         >
-          Proveedor
+          Vendido
         </button>
         <button
           className={`flex-1 py-1.5 text-xs font-bold uppercase tracking-wider rounded-md transition-all ${activeTab === 'almacenes' ? 'bg-white text-orange-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
