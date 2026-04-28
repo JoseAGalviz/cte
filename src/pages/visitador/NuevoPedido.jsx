@@ -457,8 +457,8 @@ export default function NuevoPedido() {
         if (t) descuentosAdicionalesList.push({ tiempo: t.tiempo, porcentaje: t.porcentaje })
       }
 
-      const porc_gdesc = descGlobal + descProveedorNum
-      const porc_gdesc_total = porc_gdesc + sumaDescAdicionales
+      const porc_gdesc = descGlobal
+      const porc_gdesc_total = descGlobal + descProveedorNum
 
       const items = cartItems.map(item => {
         const cantTotal = item.cantBQ + item.cantSC
@@ -492,6 +492,8 @@ export default function NuevoPedido() {
         codigo_pedido: Date.now(),
         items,
         cod_prov,
+        porc_gdesc,
+        porc_gdesc_total,
         descuentos_adicionales: descuentosAdicionalesList,
         descrip: observacion,
         ip_cliente: clientIp,
