@@ -320,6 +320,210 @@ export async function generarExcelTransferencias(facturas) {
   }
 }
 
+export function generarPDFCatalogo(productos, tipo) {
+  try {
+    if (!Array.isArray(productos) || productos.length === 0) return
+
+    const esRegional = tipo === 'regional'
+    const titulo = esRegional
+      ? 'CATÁLOGO REGIONAL — Táchira · Mérida · Trujillo'
+      : 'CATÁLOGO NACIONAL — Otros Estados'
+    const hoy = new Date().toISOString().split('T')[0]
+    const nombreArchivo = esRegional ? `catalogo_regional_${hoy}.pdf` : `catalogo_nacional_${hoy}.pdf`
+
+    const doc = new jsPDF('l', 'pt', 'a4')
+    const pageWidth  = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 36
+
+    // Header bar
+    doc.setFillColor(26, 152, 136)
+    doc.rect(0, 0, pageWidth, 60, 'F')
+    doc.setTextColor(255, 255, 255)
+    doc.setFontSize(16)
+    doc.text(titulo, margin, 38)
+    doc.setFontSize(9)
+    doc.text(hoy, pageWidth - margin, 38, { align: 'right' })
+
+    let y = 80
+
+    // Columnas: x, width, label, align
+    const tableX = margin
+    const tableW = pageWidth - margin * 2
+    const cols = [
+      { label: 'CÓDIGO',          w: 70,  align: 'center' },
+      { label: 'DESCRIPCIÓN',     w: 260, align: 'left'   },
+      { label: 'STOCK',           w: 55,  align: 'right'  },
+      { label: 'STOCK TÁCHIRA',   w: 80,  align: 'right'  },
+      { label: 'STOCK BQTO',      w: 80,  align: 'right'  },
+      { label: 'PRECIO',          w: 80,  align: 'right'  },
+    ]
+
+    const drawHeader = (startY) => {
+      doc.setFillColor(51, 65, 85)
+      doc.rect(tableX, startY, tableW, 18, 'F')
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(8)
+      let cx = tableX + 4
+      cols.forEach(col => {
+        const tx = col.align === 'right' ? cx + col.w - 4 : col.align === 'center' ? cx + col.w / 2 : cx + 2
+        doc.text(col.label, tx, startY + 12, { align: col.align === 'center' ? 'center' : col.align === 'right' ? 'right' : 'left' })
+        cx += col.w
+      })
+      return startY + 18
+    }
+
+    y = drawHeader(y)
+
+    doc.setFontSize(8)
+    productos.forEach((p, i) => {
+      if (y > pageHeight - 40) {
+        doc.addPage()
+        y = 30
+        y = drawHeader(y)
+      }
+      const rowH = 16
+      if (i % 2 === 0) {
+        doc.setFillColor(230, 247, 245)
+        doc.rect(tableX, y, tableW, rowH, 'F')
+      }
+      doc.setTextColor(30, 41, 59)
+      let cx = tableX + 4
+      const vals = [
+        { v: p.imagen || '',                             align: 'center' },
+        { v: p.descripcion || '',                        align: 'left'   },
+        { v: p.stock != null ? String(p.stock) : '',     align: 'right'  },
+        { v: p.stock_tachira != null ? String(p.stock_tachira) : '',    align: 'right' },
+        { v: p.stock_barquisimeto != null ? String(p.stock_barquisimeto) : '', align: 'right' },
+        { v: p.Precio != null ? Number(p.Precio).toFixed(2) : '',       align: 'right' },
+      ]
+      cols.forEach((col, ci) => {
+        const val = vals[ci]
+        const text = doc.splitTextToSize(val.v, col.w - 6)
+        const tx = val.align === 'right' ? cx + col.w - 4 : val.align === 'center' ? cx + col.w / 2 : cx + 2
+        doc.text(text[0] || '', tx, y + 11, { align: val.align === 'center' ? 'center' : val.align })
+        cx += col.w
+      })
+      y += rowH
+    })
+
+    doc.save(nombreArchivo)
+  } catch (err) {
+    console.error('generarPDFCatalogo error:', err)
+  }
+}
+
+export async function generarExcelCatalogo(productos, tipo) {
+  try {
+    if (!Array.isArray(productos) || productos.length === 0) return
+
+    const hoy = new Date().toISOString().split('T')[0]
+    const esRegional = tipo === 'regional'
+    const titulo = esRegional
+      ? `CATÁLOGO REGIONAL — Táchira · Mérida · Trujillo — ${hoy}`
+      : `CATÁLOGO NACIONAL — Otros Estados — ${hoy}`
+    const nombreArchivo = esRegional ? `catalogo_regional_${hoy}.xlsx` : `catalogo_nacional_${hoy}.xlsx`
+
+    const COLOR = {
+      verde:      '1a9888',
+      grisHeader: '334155',
+      verdeClaro: 'e6f7f5',
+      blanco:     'FFFFFF',
+      texto:      '1e293b',
+    }
+
+    const fillSolid = (hex) => ({ type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + hex } })
+    const borderThin = {
+      top:    { style: 'thin', color: { argb: 'FFcbd5e1' } },
+      bottom: { style: 'thin', color: { argb: 'FFcbd5e1' } },
+      left:   { style: 'thin', color: { argb: 'FFcbd5e1' } },
+      right:  { style: 'thin', color: { argb: 'FFcbd5e1' } },
+    }
+    const alignCenter = { horizontal: 'center', vertical: 'middle' }
+    const alignRight  = { horizontal: 'right',  vertical: 'middle' }
+    const alignLeft   = { horizontal: 'left',   vertical: 'middle' }
+
+    const wb = new ExcelJS.Workbook()
+    wb.creator = 'CTE Sistema'
+    wb.created = new Date()
+
+    const ws = wb.addWorksheet('Catálogo', {
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 2 }],
+      pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
+    })
+
+    const TOTAL_COLS = 6
+    ws.columns = [
+      { key: 'codigo',      width: 14 },
+      { key: 'descripcion', width: 50 },
+      { key: 'stock',       width: 12 },
+      { key: 'stTachira',   width: 14 },
+      { key: 'stBqto',      width: 16 },
+      { key: 'precio',      width: 16 },
+    ]
+
+    // Fila título
+    const titleRow = ws.addRow([titulo, ...Array(TOTAL_COLS - 1).fill('')])
+    ws.mergeCells(1, 1, 1, TOTAL_COLS)
+    titleRow.height = 30
+    const titleCell = titleRow.getCell(1)
+    titleCell.fill      = fillSolid(COLOR.verde)
+    titleCell.font      = { bold: true, size: 13, color: { argb: 'FFFFFFFF' } }
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+    // Fila cabecera
+    const headers = [
+      'CÓDIGO', 'DESCRIPCIÓN', 'STOCK TOTAL',
+      'STOCK TÁCHIRA', 'STOCK BARQUISIMETO',
+      'PRECIO',
+    ]
+    const hdrRow = ws.addRow(headers)
+    hdrRow.height = 20
+    hdrRow.eachCell(cell => {
+      cell.fill      = fillSolid(COLOR.grisHeader)
+      cell.font      = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } }
+      cell.alignment = alignCenter
+      cell.border    = borderThin
+    })
+
+    const RIGHT_COLS = new Set([3, 4, 5, 6])
+
+    productos.forEach((p, i) => {
+      const isEven = i % 2 === 0
+      const row = ws.addRow([
+        p.imagen || '',
+        p.descripcion || '',
+        p.stock ?? '',
+        p.stock_tachira ?? '',
+        p.stock_barquisimeto ?? '',
+        p.Precio ?? '',
+      ])
+      row.height = 15
+      row.eachCell((cell, colNum) => {
+        cell.fill   = fillSolid(isEven ? COLOR.blanco : COLOR.verdeClaro)
+        cell.border = borderThin
+        cell.font   = { size: 9, color: { argb: 'FF' + COLOR.texto } }
+        if (colNum === 1) { cell.alignment = alignCenter; cell.font = { ...cell.font, bold: true } }
+        else if (RIGHT_COLS.has(colNum)) cell.alignment = alignRight
+        else cell.alignment = alignLeft
+      })
+    })
+
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob   = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    })
+    const url  = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href     = url
+    link.download = nombreArchivo
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('generarExcelCatalogo error:', err)
+  }
+}
+
 export function generarExcelFactura(factura) {
   try {
     const factNum = factura.fact_num || factura.nro || factura.numero || 'factura'

@@ -52,3 +52,14 @@ export async function getNotasCredito(codProv) {
   const res = await api.post('/buscar-notas-credito-proveedor-exacto', { proveedor: code })
   return Array.isArray(res) ? res : (res?.data || [])
 }
+
+/**
+ * Obtiene el catálogo de productos del proveedor con precios y stock.
+ * POST /catalogo
+ * precio_num=4 → Táchira/Mérida/Trujillo, precio_num=3 → Otros Estados
+ */
+export async function getCatalogo(codProv, precioNum) {
+  const code = Array.isArray(codProv) ? codProv[0] : (codProv || '')
+  const res = await api.post('/catalogo', { co_prov: code, precio_num: precioNum })
+  return Array.isArray(res) ? res : (res?.data || [])
+}

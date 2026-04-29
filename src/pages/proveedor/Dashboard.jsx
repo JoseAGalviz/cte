@@ -3,12 +3,13 @@ import { useAuth } from '../../context/AuthContext'
 import { MapPin, Globe, Loader2, X } from 'lucide-react'
 
 // Importar servicios
-import { 
-  getFacturasProveedor, 
-  getVentasUsuarios, 
-  getProductosMasVendidos, 
-  getStockAlmacenes, 
-  getNotasCredito 
+import {
+  getFacturasProveedor,
+  getVentasUsuarios,
+  getProductosMasVendidos,
+  getStockAlmacenes,
+  getNotasCredito,
+  getCatalogo
 } from '../../services/proveedorService'
 
 // Importar componentes de UI
@@ -23,7 +24,7 @@ import ModalComparativaProv from '../../components/proveedor/ModalComparativaPro
 import ModalProforma from '../../components/visitador/ModalProforma'
 
 // Importar generadores
-import { generarPDFFactura, generarExcelFactura, generarExcelTransferencias } from '../../utils/exportHelpers'
+import { generarPDFFactura, generarExcelFactura, generarExcelTransferencias, generarExcelCatalogo, generarPDFCatalogo } from '../../utils/exportHelpers'
 
 export default function ProveedorDashboard() {
   const { user } = useAuth()
@@ -46,7 +47,26 @@ export default function ProveedorDashboard() {
   const [loadingNotas, setLoadingNotas] = useState(true)
 
   const anyLoading = loadingFacturas || loadingVentas || loadingProductos || loadingStock || loadingNotas
-  
+
+  const [loadingCatalogo, setLoadingCatalogo] = useState(false)
+  const [modalCatalogo, setModalCatalogo] = useState(null) // { precioNum, tipo }
+
+  const handleCatalogo = async (formato) => {
+    if (!modalCatalogo || loadingCatalogo) return
+    const { precioNum, tipo } = modalCatalogo
+    setModalCatalogo(null)
+    setLoadingCatalogo(true)
+    try {
+      const productos = await getCatalogo(codProv, precioNum)
+      if (formato === 'pdf') generarPDFCatalogo(productos, tipo)
+      else await generarExcelCatalogo(productos, tipo)
+    } catch (err) {
+      console.error('Error catálogo:', err)
+    } finally {
+      setLoadingCatalogo(false)
+    }
+  }
+
   // Filtros
   const [fechaDesde, setFechaDesde] = useState('')
   const [fechaHasta, setFechaHasta] = useState('')
@@ -129,16 +149,24 @@ export default function ProveedorDashboard() {
 
       {/* Botones de catálogo — ancho completo */}
       <div className="grid grid-cols-2 gap-3">
-        <button className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors">
-          <MapPin size={22} className="opacity-90 shrink-0" />
+        <button
+          onClick={() => setModalCatalogo({ precioNum: 4, tipo: 'regional' })}
+          disabled={loadingCatalogo}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors"
+        >
+          {loadingCatalogo ? <Loader2 size={22} className="animate-spin shrink-0" /> : <MapPin size={22} className="opacity-90 shrink-0" />}
           <div className="text-left">
             <span className="block font-bold text-sm leading-tight uppercase">Táchira · Mérida · Trujillo</span>
             <span className="text-xs opacity-75">Disponibilidad regional</span>
           </div>
         </button>
 
-        <button className="bg-slate-700 hover:bg-slate-800 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors">
-          <Globe size={22} className="opacity-90 shrink-0" />
+        <button
+          onClick={() => setModalCatalogo({ precioNum: 3, tipo: 'nacional' })}
+          disabled={loadingCatalogo}
+          className="bg-slate-700 hover:bg-slate-800 disabled:opacity-60 text-white rounded-xl shadow-sm px-4 py-3 flex items-center justify-center gap-3 transition-colors"
+        >
+          {loadingCatalogo ? <Loader2 size={22} className="animate-spin shrink-0" /> : <Globe size={22} className="opacity-90 shrink-0" />}
           <div className="text-left">
             <span className="block font-bold text-sm leading-tight uppercase">Otros Estados</span>
             <span className="text-xs opacity-75">Disponibilidad nacional</span>
@@ -267,6 +295,43 @@ export default function ProveedorDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal selección formato catálogo */}
+      {modalCatalogo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-80 flex flex-col gap-4">
+            <div>
+              <h3 className="font-black text-slate-800 text-base uppercase tracking-wide">Generar catálogo</h3>
+              <p className="text-sm text-slate-500 mt-1">
+                {modalCatalogo.tipo === 'regional' ? 'Táchira · Mérida · Trujillo' : 'Otros Estados'}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">¿En qué formato deseas descargarlo?</p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => handleCatalogo('pdf')}
+                className="flex flex-col items-center gap-2 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 rounded-xl py-4 font-bold text-sm transition-colors"
+              >
+                <span className="text-2xl">📄</span>
+                PDF
+              </button>
+              <button
+                onClick={() => handleCatalogo('excel')}
+                className="flex flex-col items-center gap-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl py-4 font-bold text-sm transition-colors"
+              >
+                <span className="text-2xl">📊</span>
+                Excel
+              </button>
+            </div>
+            <button
+              onClick={() => setModalCatalogo(null)}
+              className="text-xs text-slate-400 hover:text-slate-600 text-center transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modales Compartidos */}
       {modalDetalles && (

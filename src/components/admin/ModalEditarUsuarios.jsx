@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Edit2, FileSpreadsheet, Save, ChevronLeft, ChevronRight } from 'lucide-react'
+import { X, Edit2, FileSpreadsheet, Save, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { getUsuarios, editarUsuario } from '../../services/adminService'
 import * as XLSX from 'xlsx'
 
@@ -20,6 +20,7 @@ export default function ModalEditarUsuarios({ onClose }) {
   const [guardando, setGuardando] = useState(false)
   const [msg, setMsg] = useState(null)
   const [pagina, setPagina] = useState(1)
+  const [busqueda, setBusqueda] = useState('')
 
   useEffect(() => {
     cargar()
@@ -81,15 +82,44 @@ export default function ModalEditarUsuarios({ onClose }) {
     XLSX.writeFile(wb, 'usuarios_admin.xlsx')
   }
 
-  const totalPags = Math.max(1, Math.ceil(usuarios.length / PAGE_SIZE))
-  const slice = usuarios.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+  const usuariosFiltrados = usuarios.filter(u => {
+    const term = busqueda.toLowerCase().trim()
+    if (!term) return true
+    return (
+      String(u.user || '').toLowerCase().includes(term) ||
+      String(u.rol || '').toLowerCase().includes(term) ||
+      String(u.telefono || '').toLowerCase().includes(term) ||
+      String(u.estado || '').toLowerCase().includes(term) ||
+      String(u.proveedor || '').toLowerCase().includes(term) ||
+      String(u.id || '').toLowerCase().includes(term)
+    )
+  })
+
+  const totalPags = Math.max(1, Math.ceil(usuariosFiltrados.length / PAGE_SIZE))
+  const slice = usuariosFiltrados.slice((pagina - 1) * PAGE_SIZE, pagina * PAGE_SIZE)
+
+  useEffect(() => {
+    setPagina(1)
+  }, [busqueda])
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-          <h2 className="text-lg font-bold text-slate-800">Gestión de Usuarios</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-slate-100 gap-4">
+          <h2 className="text-lg font-bold text-slate-800 whitespace-nowrap">Gestión de Usuarios</h2>
+          
+          <div className="flex-1 max-w-md relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              placeholder="Buscar por usuario, rol, tlf..."
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-400 transition-all"
+            />
+          </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={exportar}
@@ -232,7 +262,7 @@ export default function ModalEditarUsuarios({ onClose }) {
         {/* Paginador */}
         {totalPags > 1 && (
           <div className="flex items-center justify-between px-6 py-3 border-t border-slate-100">
-            <span className="text-xs text-slate-400">{usuarios.length} usuarios — pág. {pagina}/{totalPags}</span>
+            <span className="text-xs text-slate-400">{usuariosFiltrados.length} usuarios — pág. {pagina}/{totalPags}</span>
             <div className="flex gap-1">
               <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1} className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 transition">
                 <ChevronLeft size={15} />
