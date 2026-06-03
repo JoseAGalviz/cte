@@ -20,6 +20,7 @@ import ModalDetalleAdmin from '../../components/admin/ModalDetalleAdmin'
 import ModalTiemposPago from '../../components/admin/ModalTiemposPago'
 import ModalPedidos from '../../components/admin/ModalPedidos'
 import ModalInconsistencias from '../../components/admin/ModalInconsistencias'
+import TablaSaldosClientesProv from '../../components/admin/TablaSaldosClientesProv'
 
 // Default month range: 3 months ago → current
 const _now = new Date()
@@ -264,6 +265,9 @@ export default function AdminDashboard() {
 
           {/* Notas de Crédito */}
           <TablaNotasCreditoAdmin notas={notas} provMap={provMap} />
+
+          {/* Saldos por Cliente — Proveedor */}
+          <TablaSaldosClientesProv provMap={provMap} />
         </div>
 
         {/* Right sidebar — 1 col */}

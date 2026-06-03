@@ -83,3 +83,11 @@ export async function getProveedores() {
   const res = await api.get('/proveedores-profit')
   return Array.isArray(res) ? res : []
 }
+
+export async function getSaldosClientesProveedor(co_prov, startDate, endDate) {
+  const res = await api.post('/saldos-clientes-proveedor', { co_prov, startDate, endDate })
+  if (Array.isArray(res)) return res
+  if (res?.rows) return res.rows
+  if (res?.data) return res.data
+  return []
+}

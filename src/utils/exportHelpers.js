@@ -158,9 +158,10 @@ export async function generarExcelTransferencias(facturas) {
       pageSetup: { orientation: 'landscape', fitToPage: true, fitToWidth: 1 }
     })
 
-    // Anchos de columna (19 cols)
+    // Anchos de columna (22 cols)
     // 1:Factura 2:Pedido 3:SICM 4:Cliente 5:RIF 6:Fecha 7:Tasa 8:Total Bs 9:Total $ 10:Desc%
     // 11:Usuario 12:#Reng 13:Código 14:Cod.Barras 15:Descripción 16:Cantidad 17:Precio$ 18:PrecioBS 19:Subtotal
+    // 20:Desc Proveedor% 21:Desc Categoría% 22:Desc Escala%
     ws.columns = [
       { key: 'factura',   width: 14 },
       { key: 'pedido',    width: 11 },
@@ -181,9 +182,12 @@ export async function generarExcelTransferencias(facturas) {
       { key: 'precio',    width: 13 },
       { key: 'precioBs',  width: 16 },
       { key: 'subtotal',  width: 15 },
+      { key: 'descProv',  width: 14 },
+      { key: 'descCat',   width: 14 },
+      { key: 'descEsc',   width: 14 },
     ]
 
-    const TOTAL_COLS = 19
+    const TOTAL_COLS = 22
 
     // ── Fila 1: Título ─────────────────────────────────────────────────────────
     const titleRow = ws.addRow([`REPORTE DE TRANSFERENCIAS — ${hoy}`, ...Array(TOTAL_COLS - 1).fill('')])
@@ -217,7 +221,8 @@ export async function generarExcelTransferencias(facturas) {
     const headers = [
       'FACTURA', 'PEDIDO', 'SICM', 'CLIENTE', 'RIF', 'FECHA',
       'TASA', 'TOTAL BS', 'TOTAL $', 'DESC %', 'USUARIO',
-      '# RENG', 'CÓDIGO', 'COD. BARRAS', 'DESCRIPCIÓN', 'CANTIDAD', 'PRECIO UNIT. $', 'PRECIO UNIT. BS', 'TOTAL RENGLÓN'
+      '# RENG', 'CÓDIGO', 'COD. BARRAS', 'DESCRIPCIÓN', 'CANTIDAD', 'PRECIO UNIT. $', 'PRECIO UNIT. BS', 'TOTAL RENGLÓN',
+      'DESC PROVEEDOR %', 'DESC CATEGORÍA %', 'DESC ESCALA %'
     ]
     const hdrRow = ws.addRow(headers)
     hdrRow.height = 22
@@ -265,6 +270,15 @@ export async function generarExcelTransferencias(facturas) {
         const isEven = dataRowIndex % 2 === 0
         const bgFill = fillSolid(isEven ? COLOR.verdeClaro : COLOR.blanco)
 
+        // Parse porc_desc → 3 valores separados por '+'
+        let dProv = '', dCat = '', dEsc = ''
+        if (p && p.porc_desc != null && p.porc_desc !== '') {
+          const parts = String(p.porc_desc).split('+')
+          dProv = isNaN(parseFloat(parts[0])) ? '' : parseFloat(parts[0])
+          dCat  = isNaN(parseFloat(parts[1])) ? '' : parseFloat(parts[1])
+          dEsc  = isNaN(parseFloat(parts[2])) ? '' : parseFloat(parts[2])
+        }
+
         const row = ws.addRow([
           factNum, pedido, sicm, cliente, rif, fecha, tasa, totBs, totUsd, pct, usuario,
           p ? (p.reng_num ?? '')                                          : '',
@@ -275,6 +289,7 @@ export async function generarExcelTransferencias(facturas) {
           p ? (p.prec_vta ?? p.precio ?? p.precio_unitario ?? '')         : '',
           p ? (() => { const pu = Number(p.prec_vta ?? p.precio ?? p.precio_unitario ?? 0); const t = Number(f.tasa) || 0; return pu && t ? Number((pu * t).toFixed(2)) : '' })() : '',
           p ? (p.reng_neto ?? p.subtotal ?? p.total_linea ?? '')          : '',
+          dProv, dCat, dEsc,
         ])
         row.height = 16
 
@@ -299,6 +314,27 @@ export async function generarExcelTransferencias(facturas) {
           if (colNum === 10 && pct) {
             cell.fill = fillSolid('fef08a')
             cell.font = { size: 9, bold: true, color: { argb: 'FF92400e' } }
+          }
+
+          // Violeta en Desc Proveedor %
+          if (colNum === 20 && dProv !== '') {
+            cell.fill = fillSolid('ede9fe')
+            cell.font = { size: 9, bold: true, color: { argb: 'FF5b21b6' } }
+            cell.alignment = alignCenter
+          }
+
+          // Ámbar en Desc Categoría %
+          if (colNum === 21 && dCat !== '') {
+            cell.fill = fillSolid('fef3c7')
+            cell.font = { size: 9, bold: true, color: { argb: 'FF92400e' } }
+            cell.alignment = alignCenter
+          }
+
+          // Celeste en Desc Escala %
+          if (colNum === 22 && dEsc !== '') {
+            cell.fill = fillSolid('e0f2fe')
+            cell.font = { size: 9, bold: true, color: { argb: 'FF075985' } }
+            cell.alignment = alignCenter
           }
         })
       })

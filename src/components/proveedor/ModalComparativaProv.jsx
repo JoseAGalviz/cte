@@ -195,6 +195,25 @@ export default function ModalComparativaProv({ factura, onClose }) {
                                 }`}>
                                 Cant: {cantFac}
                               </span>
+                              {art.porc_desc != null && art.porc_desc !== '' && (() => {
+                                const parts = String(art.porc_desc).split('+')
+                                const dProv = parseFloat(parts[0]) || 0
+                                const dCat  = parseFloat(parts[1]) || 0
+                                const dEsc  = parseFloat(parts[2]) || 0
+                                return (
+                                  <>
+                                    <span className="text-[0.65rem] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-black" title="Descuento por Proveedor">
+                                      Prov: {dProv.toFixed(2)}%
+                                    </span>
+                                    <span className="text-[0.65rem] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black" title="Descuento por Categoría">
+                                      Cat: {dCat.toFixed(2)}%
+                                    </span>
+                                    <span className="text-[0.65rem] bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded font-black" title="Descuento por Escala">
+                                      Esc: {dEsc.toFixed(2)}%
+                                    </span>
+                                  </>
+                                )
+                              })()}
                               {art.prec_vta && (
                                 <span className="text-[0.65rem] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-black">
                                   {parseFloat(art.prec_vta).toFixed(2)} $/u
