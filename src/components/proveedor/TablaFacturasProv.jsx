@@ -6,7 +6,8 @@ export default function TablaFacturasProv({
   onVerDetalles,
   onDescargarPDF,
   onDescargarExcel,
-  onGenerarExcelGeneral
+  onGenerarExcelGeneral,
+  onVerProforma
 }) {
   const hasData = Array.isArray(facturas) && facturas.length > 0
 
@@ -96,20 +97,29 @@ export default function TablaFacturasProv({
                     
                     <td className="px-5 py-3 text-center">
                       <div className="flex items-center justify-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity">
-                        <button 
+                        <button
                           onClick={() => onVerDetalles(fact)}
                           className="p-1.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-lg transition-colors border border-blue-200"
                           title="Ver Detalles"
                         >
                           <Eye size={14} />
                         </button>
-                        <button 
+                        <button
                           onClick={() => onDescargarPDF(fact)}
                           className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-lg transition-colors border border-rose-200"
                           title="Descargar PDF Factura"
                         >
                           <FileText size={14} />
                         </button>
+                        {onVerProforma && (
+                          <button
+                            onClick={() => onVerProforma(fact)}
+                            className="p-1.5 bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white rounded-lg transition-colors border border-violet-200"
+                            title="Ver Proforma Técnica"
+                          >
+                            <ScrollText size={14} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

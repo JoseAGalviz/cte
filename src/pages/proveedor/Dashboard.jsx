@@ -26,6 +26,45 @@ import ModalProforma from '../../components/visitador/ModalProforma'
 // Importar generadores
 import { generarPDFFactura, generarExcelFactura, generarExcelTransferencias, generarExcelCatalogo, generarPDFCatalogo } from '../../utils/exportHelpers'
 
+// Adapta el shape "factura" del proveedor al shape "pedido" que espera ModalProforma (compartido con visitador)
+function adaptFacturaToPedido(factura) {
+  const articulos = Array.isArray(factura.articulos) ? factura.articulos : (Array.isArray(factura.productos) ? factura.productos : [])
+  const pct = Number(String(factura.campo6 || '').replace(/%/g, '').replace(',', '.').trim()) || 0
+
+  return {
+    fact_num: factura.fact_num || factura.nro || '',
+    fecha: factura.fec_emis || factura.fecha || '',
+    co_us_in: factura.co_us_in || '',
+    tasa: factura.tasa,
+    tot_bruto: factura.tot_bruto,
+    tot_neto: factura.tot_neto,
+    porc_gdesc: pct,
+    saldo: factura.saldo || factura.tot_neto,
+    rif: factura.rif,
+    info_profit: {
+      cliente: {
+        cli_des: factura.cli_des,
+        rif: factura.rif,
+        direc1: factura.direc1 || factura.direccion || ''
+      },
+      factura: {
+        fact_num: factura.fact_num || factura.nro || '',
+        tasa: factura.tasa
+      }
+    },
+    productos: articulos.map(p => ({
+      art_des: p.art_des || p.descripcion || p.co_art || '',
+      co_art: p.co_art || p.codigo || '',
+      campo1: p.lote || p.campo1 || '',
+      cantidad: p.total_art ?? p.cantidad ?? p.cant_producto ?? p.cant ?? 0,
+      precio_unit: p.prec_vta ?? p.precio ?? p.precio_unitario ?? 0,
+      tot_art: p.reng_neto ?? p.subtotal ?? p.total_linea ?? 0,
+      uni_venta: p.uni_venta || 'UND',
+      porc_desc: p.porc_desc || p.desc || 0
+    }))
+  }
+}
+
 export default function ProveedorDashboard() {
   const { user } = useAuth()
   
@@ -265,6 +304,7 @@ export default function ProveedorDashboard() {
               onDescargarPDF={(factura) => generarPDFFactura(factura)}
               onDescargarExcel={(factura) => generarExcelFactura(factura)}
               onGenerarExcelGeneral={() => generarExcelTransferencias(facturas)}
+              onVerProforma={(factura) => setModalProforma(adaptFacturaToPedido(factura))}
             />
           )}
 
