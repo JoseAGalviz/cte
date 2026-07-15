@@ -28,9 +28,13 @@ export default function ModalProforma({ pedido, onClose }) {
     maximumFractionDigits: 2
   })
 
-  const subtotal = parseFloat(pedido.tot_bruto || pedido.tot_brut || productos.reduce((s, p) => s + (parseFloat(p.tot_art ?? p.subtotal) || 0), 0))
+  const subtotalBs = parseFloat(pedido.tot_bruto || pedido.tot_brut || 0)
+  const subtotal = subtotalBs
+    ? subtotalBs / tasa
+    : productos.reduce((s, p) => s + (parseFloat(p.tot_art ?? p.subtotal) || 0), 0)
   const descPct = parseFloat(pedido.porc_gdesc) || 0
-  const descMonto = parseFloat(pedido.glob_desc || (subtotal * (descPct / 100)))
+  const descMontoBs = parseFloat(pedido.glob_desc || 0)
+  const descMonto = descMontoBs ? descMontoBs / tasa : subtotal * (descPct / 100)
   const iva = parseFloat(pedido.iva || 0)
   const total = parseFloat(pedido.tot_neto) || (subtotal - descMonto + iva)
   const saldo = parseFloat(pedido.saldo || total)
