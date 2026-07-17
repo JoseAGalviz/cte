@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api, getAuthToken } from './api'
 
 const PEDIDOS_TRANS_URL = 'https://98.94.185.164.nip.io/api/pedidosTrans/crear'
 
@@ -22,9 +22,13 @@ const PEDIDOS_TRANS_URL = 'https://98.94.185.164.nip.io/api/pedidosTrans/crear'
  * @param {number}   [payload.items[].descuento] - % descuento del proveedor
  */
 export async function crearPedidoTransf(payload) {
+  const token = getAuthToken()
   const response = await fetch(PEDIDOS_TRANS_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(payload),
   })
   const data = await response.json()

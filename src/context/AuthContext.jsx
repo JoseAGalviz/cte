@@ -1,5 +1,6 @@
 import { createContext, useContext, useState } from 'react'
 import { loginUsuario } from '../services/authService'
+import { setAuthToken, clearAuthToken } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -36,6 +37,7 @@ export function AuthProvider({ children }) {
 
     setUser(session)
     localStorage.setItem(SESSION_KEY, JSON.stringify(session))
+    setAuthToken(data.token)
 
     return session
   }
@@ -43,6 +45,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null)
     localStorage.removeItem(SESSION_KEY)
+    clearAuthToken()
   }
 
   const register = async (name, email, password, rol) => {

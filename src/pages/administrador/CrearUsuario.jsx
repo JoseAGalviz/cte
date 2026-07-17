@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { UserPlus, AlertCircle, Check, Loader2, X, Search } from 'lucide-react'
-import { api } from '../../services/api'
+import { api, getAuthToken } from '../../services/api'
 
 const VENEZUELA_STATES = [
   'Amazonas','Anzoátegui','Apure','Aragua','Barinas','Bolívar','Carabobo',
@@ -146,7 +146,9 @@ export default function CrearUsuario() {
     }
     if (rol === 'visitador') {
       setLoadingSeg(true)
-      fetch('https://98.94.185.164.nip.io/api/clientes/segmentos')
+      fetch('https://98.94.185.164.nip.io/api/clientes/segmentos', {
+        headers: getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {},
+      })
         .then(r => r.json())
         .then(data => {
           const arr = Array.isArray(data) ? data : []

@@ -1,11 +1,14 @@
 const BASE_URL = 'https://98.94.185.164.nip.io/api/transferencias'
+const TOKEN_KEY = 'cte_token'
 
 async function request(endpoint, options = {}) {
   const url = `${BASE_URL}${endpoint}`
+  const token = localStorage.getItem(TOKEN_KEY)
 
   const config = {
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
     ...options,
@@ -34,4 +37,16 @@ export const api = {
 
   delete: (endpoint, options) =>
     request(endpoint, { method: 'DELETE', ...options }),
+}
+
+export function setAuthToken(token) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
+export function getAuthToken() {
+  return localStorage.getItem(TOKEN_KEY)
 }
